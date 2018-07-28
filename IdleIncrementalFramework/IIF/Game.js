@@ -1,4 +1,5 @@
 let debug = true;
+
 let localization = require('./localization');
 let view = require('./view');
 let GameValue = require('./dataStruct/gamevalue');
@@ -9,12 +10,15 @@ let _view = new WeakMap();
 let _values = new WeakMap();
 let _save = new WeakMap();
 let _time = new WeakMap();
+let _dependencies = new WeakMap();
+
+let reservedValues = ["time"];
 
 class Game {
     constructor(config) {
 
         if (debug)
-            console.log("Game : new game",config)
+            console.log("Game : new Game()",config);
 
         this.config = config;
         let that = this;
@@ -45,10 +49,54 @@ class Game {
         }
 
         if (!(typeof(config.ticks) === "undefined")) {
-            _time.set(this,new Time(this));
+            _time.set(this,new Time(this,config.ticks));
+        }
+
+        if ((!(typeof(config.dependencies) === "undefined")) && (Object.keys(config.dependencies).length > 0)) {
+            // there are dependencies to load
+            let dependencies = {};
+
+            Object.keys(config.dependencies).forEach(function(key) {
+                dependencies[key] = false;
+                that.loadDependency(key,config.dependencies[key],function() {
+                    let dependencies = _dependencies.get(that);
+                    dependencies[key] = true;
+                    _dependencies.set(that,dependencies);
+                    if (typeof(this.onDependencyLoaded) === "function") {
+                        this.onDependencyLoaded.call(game,key);
+                    }
+                    if (typeof(this.onDependenciesLoaded) === "function") {
+                        let allDependancyLoaded = true;
+                        Object.keys(dependencies).forEach(function(key) {
+                            allDependancyLoaded = allDependancyLoaded && dependencies[key];
+                        })
+                        if (allDependancyLoaded)
+                            this.onDependenciesLoaded.call(game);
+                    }
+                });
+            })
+
+            _dependencies.set(this,dependencies);
+
         }
 
         _save.set(this,new Save(config.saveKey,this));
+    }
+    loadDependency (key,path,callback) {
+        let that = this;
+        fetch(path)
+            .then(response => response.text())
+            .then(_data => {
+                if (debug)
+                    console.log("Game : Loaded dependency",path);
+                eval(_data);
+            })
+            .catch(function(error) {
+                console.warn("Game : Error while loading a dependency : ",error.message,path);
+            })
+            .then(()=>{
+                callback.call(that)
+            });
     }
     // values management
     redrawValue(key) {
@@ -65,6 +113,10 @@ class Game {
         });
     }
     registerValue (key,config) {
+        if (reservedValues.indexOf(key)>=0) {
+            console.error('Game : trying to register a value with a reserved key :',key);
+            return false;
+        }
         let values = _values.get(this);
         if (!(typeof(values[key]) === "undefined")) {
             console.warn('Game : trying to create a registered value with an already taken identifier :',key)

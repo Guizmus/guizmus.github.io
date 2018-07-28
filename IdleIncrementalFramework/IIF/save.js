@@ -1,9 +1,13 @@
 let debug = true;
 
-let _IIF = require("./main");
+let IIF = require("./main");
 
 class Save {
     constructor (saveKey,gameObj) {
+
+        if (debug)
+            console.log("Save : new Save()",saveKey,gameObj);
+
         this.saveKey = saveKey+"_IIFSave";
         this.gameObj = gameObj;
         if (this.hasSaveData()) {
@@ -24,7 +28,7 @@ class Save {
     newSave () {
         return {
             meta : {
-                IIF_version : _IIF.IIF_version,
+                IIF_version : IIF.IIF_version,
                 game_version : this.gameObj.config.gameVersion
             },
             values : {},
@@ -35,6 +39,9 @@ class Save {
         this.gameObj.listValues().forEach(function(key) {
             that.data.values[key] = that.gameObj.getValue(key).toJSON();
         });
+        if (this.gameObj.config.ticks) {
+            this.data.time = this.gameObj.getTicker().toJSON();
+        }
 
         if (debug)
             console.log('Save : saving data to localstorage',this.data);
@@ -51,15 +58,18 @@ class Save {
         this.gameObj.listValues().forEach(function(key) {
             that.gameObj.getValue(key).fromJSON(that.data.values[key]);
         });
+        if ((this.gameObj.config.ticks) && !(typeof(this.data.time) === "undefined")) {
+            this.gameObj.getTicker().fromJSON(this.data.time);
+        }
         return this.data;
     }
     upgradeSave_IIF() {
 
-        if (this.data.meta.IIF_version === _IIF.IIF_version)
+        if (this.data.meta.IIF_version === IIF.IIF_version)
             return;
 
         if (debug)
-            console.log('Save : migrating IIF savedData from ',this.data.meta.IIF_version,'to',_IIF.IIF_version);
+            console.log('Save : migrating IIF savedData from ',this.data.meta.IIF_version,'to',IIF.IIF_version);
 
         switch(this.data.meta.IIF_version) {
             case '0.0.1' : ;// add here the migration code for saveData from 0.0.1 to the next version. Don't put a break, and put versions in chronological order to trigger all the upgrades necessary
@@ -67,7 +77,7 @@ class Save {
                 // delete(this.data.data);
             default:break;
         }
-        this.data.meta.IIF_version = _IIF.IIF_version;
+        this.data.meta.IIF_version = IIF.IIF_version;
 
     }
     upgradeSave_Game () {

@@ -1,9 +1,14 @@
-let debug = true;
+let debug = false;
+
 let fs = require('fs');
 let localization = require('./localization');
 
 class Tpl {
     constructor (tplStr) {
+
+        if (debug)
+            console.log("html : new Tpl()",tplStr);
+
         this.str = tplStr;
         this.keys = [];
         this.values = {};
@@ -77,7 +82,7 @@ function getTpl (tpl,datas) {
 function localizedText (path,lib) {
     return getTpl('localizedText',{
     	path : path,
-        text : localization.getText(path,lib),
+        text : localization.getText(path,lib)
     });
 }
 exports.getTpl = getTpl;

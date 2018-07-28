@@ -1,10 +1,10 @@
-let debug = true;
+let debug = false;
+
+//glabol params
 let defaultLang = 'en-EN';
 let supportedLang = 'en-EN';
-
 let htmlSelector = 'loc'; // class to add to the html tag to localize
 let htmlDataKey = 'lk'; // data key to use to store the path to text
-
 let key = 'lang'; // key used in the get parameter of the URL to set a specific language
 
 let currentLang = undefined;
@@ -126,6 +126,8 @@ function getLib (lib) {
         lib = currentLib;
     let libPath = currentLang+'/'+lib;
     if(!libs[libPath]) {
+        if (debug)
+            console.warn("Localization : Trying to get an unloaded lib : "+libPath)
         return false;
     }
     return libs[libPath];
